@@ -94,16 +94,23 @@ class NaverProvider:
         return self._parse_search_api(data, limit=limit)
 
     def _parse_search_api(self, data: dict, *, limit: int) -> list[Product]:
-        products: list[Product] = []
         # Common shapes: shoppingResult.products / data.products / products
         candidates = (
             data.get("shoppingResult", {}).get("products")
-            or data.get("data", {}).get("products")
+            or (
+                data.get("data", {}).get("products")
+                if isinstance(data.get("data"), dict)
+                else []
+            )
             or data.get("products")
             or []
         )
         if not isinstance(candidates, list):
             candidates = self._extract_cards(data)
+        return self._parse_cards(candidates, limit=limit)
+
+    def _parse_cards(self, candidates: list[object], *, limit: int) -> list[Product]:
+        products: list[Product] = []
 
         for card in candidates:
             if len(products) >= limit:
@@ -126,26 +133,39 @@ class NaverProvider:
                 or card.get("lowPrice")
                 or card.get("mobileLowPrice")
                 or card.get("salePrice")
+                or card.get("discountedSalePrice")
+                or card.get("discountedKRWSalePrice")
             )
-            url = (
-                card.get("productUrl")
-                or card.get("mallProductUrl")
-                or card.get("link")
-                or card.get("url")
-                or ""
-            )
+            url = ""
+            for url_value in (
+                card.get("productUrl"),
+                card.get("productClickUrl"),
+                card.get("mallProductUrl"),
+                card.get("link"),
+                card.get("url"),
+            ):
+                if isinstance(url_value, dict):
+                    url_value = url_value.get("pcUrl") or url_value.get("mobileUrl")
+                if url_value:
+                    url = str(url_value)
+                    break
             nv_mid = card.get("nvMid") or card.get("id")
             if not url and nv_mid:
                 url = f"https://search.shopping.naver.com/catalog/{nv_mid}"
             if not url:
                 continue
+            image_url = card.get("imageUrl") or card.get("image")
+            if not image_url and isinstance(card.get("images"), list):
+                first_image = card["images"][0] if card["images"] else None
+                if isinstance(first_image, dict):
+                    image_url = first_image.get("imageUrl")
             products.append(
                 Product(
                     source="naver",
                     title=title,
                     price=price,
                     url=str(url),
-                    image_url=card.get("imageUrl") or card.get("image"),
+                    image_url=image_url,
                     mall_name=card.get("mallName") or card.get("mall"),
                     product_id=str(nv_mid) if nv_mid else None,
                     raw=card,
@@ -153,7 +173,28 @@ class NaverProvider:
             )
         return products
 
-    def _parse_bff(self, data: dict, *, limit: int) -> list[Product]:
+    def _parse_bff(self, data: object, *, limit: int) -> list[Product]:
+        if not isinstance(data, dict):
+            return []
+
+        cards: list[object] = []
+        pages = data.get("data", [])
+        if isinstance(pages, list):
+            for page in pages:
+                if not isinstance(page, dict):
+                    continue
+                slots = page.get("slots", [])
+                if not isinstance(slots, list):
+                    continue
+                for slot in slots:
+                    if not isinstance(slot, dict):
+                        continue
+                    card = slot.get("data")
+                    if isinstance(card, dict):
+                        cards.append(card)
+
+        if cards:
+            return self._parse_cards(cards, limit=limit)
         return self._parse_search_api(data, limit=limit)
 
     def _extract_cards(self, data: object) -> list[dict]:

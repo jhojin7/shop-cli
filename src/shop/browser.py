@@ -35,7 +35,10 @@ def search_naver_with_playwright(query: str, *, limit: int = 10) -> list[Product
         def on_response(response) -> None:
             try:
                 u = response.url
-                if "search" in u and response.status == 200:
+                if (
+                    ("search" in u or "shopping-paged-slot" in u)
+                    and response.status == 200
+                ):
                     ct = response.headers.get("content-type", "")
                     if "json" in ct:
                         data = response.json()
@@ -79,6 +82,7 @@ def search_naver_with_playwright(query: str, *, limit: int = 10) -> list[Product
 
 
 def search_emart_with_playwright(query: str, *, limit: int = 10) -> list[Product]:
+    """Legacy DOM fallback; EmartProvider uses the structured API instead."""
     from playwright.sync_api import sync_playwright
 
     url = f"https://www.ssg.com/search.ssg?target=all&query={quote(query)}"

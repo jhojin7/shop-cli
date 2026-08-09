@@ -29,6 +29,7 @@ def search(
     """검색 결과를 출력한다."""
     provider = get_provider(source)
     results = provider.search(query, limit=limit)
+    _write_last_search(source, results)
 
     if json_out:
         import json
@@ -56,8 +57,6 @@ def search(
         f"\n저장: [cyan]shop save {source} <index>[/cyan]  "
         f"또는 [cyan]shop save-url <url>[/cyan]"
     )
-    # stash last search for save-by-index (session-local via temp file)
-    _write_last_search(source, results)
 
 
 @app.command("save")
