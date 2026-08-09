@@ -5,14 +5,14 @@
 - 검색 결과를 **로컬 SQLite**에 저장 (wishlist / tracker)
 - Hermes / Discord 게이트웨이에서 쉘 tool로 호출하기 좋게 CLI 중심
 - Naver: public BFF JSON 우선 → Playwright fallback
-- Emart/SSG: Playwright
+- Emart/SSG: structured search API used by the Emart mobile frontend
 
 ## Setup (uv)
 
 ```bash
 cd shop
 uv sync
-uv run playwright install chromium   # Emart / Naver fallback
+uv run playwright install chromium   # Naver browser fallback
 ```
 
 ## Commands

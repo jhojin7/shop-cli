@@ -36,7 +36,7 @@ E2E grocery keywords:
 | CLI: `search`, `save`, `save-url`, `list`, `check`, `rm` | Done |
 | Provider protocol + `get_provider()` | Done |
 | Naver: BFF → internal search API → Playwright fallback | Implemented |
-| Emart: Playwright | Implemented (selectors may need tuning) |
+| Emart: SSG structured search API | Implemented; uses the endpoint exposed by the Emart mobile frontend |
 | Mock provider (`SHOP_MOCK=1`) for offline/CI | Done |
 | E2E test file for 6 keywords × 2 sources | Done |
 | Sandbox live HTTP to Naver/SSG | **Blocked** (418 / 403 from datacenter IP) |
@@ -144,10 +144,9 @@ for source in ('naver', 'emart'):
 1. **Naver HTTP from cloud IP:**  
    - `ns-portal.../shopping-paged-slot` → `200` but `{"data":[]}`  
    - `search.shopping.naver.com/api/search/all` → **418** bot block HTML  
-2. **SSG** → **403**  
-3. Therefore **Playwright on Pi (residential KR IP)** is the real path for live data.  
-4. Playwright selectors in `browser.py` are **heuristic** and will need adjustment after first live run.  
-5. Prefer intercepting XHR JSON in Playwright (`page.on("response")`) over brittle DOM selectors when possible (already wired for Naver).
+2. **SSG HTML search pages** → **403** from the current environment. The Emart mobile frontend exposes a structured search endpoint that is usable without loading the blocked HTML page.
+3. The active Emart provider uses that structured endpoint; the legacy Playwright selectors in `browser.py` are no longer on the normal search path.
+4. Prefer structured JSON responses over brittle DOM selectors when available.
 
 Reference for Naver public surface (may drift):  
 [NomaDamas/k-skill naver-shopping-search](https://github.com/NomaDamas/k-skill/blob/main/docs/features/naver-shopping-search.md)  
@@ -198,7 +197,7 @@ Report whether `check` refreshed `last_price`.
 - Pi resource notes (RAM, chromium crash?)
 
 ### 7. Suggested next commits (Hermes opinion)
-- Selector fixes?
+- Structured API schema-drift fixes?
 - Persistent browser context / storage_state?
 - Cron for `shop check` + Discord notify via gateway?
 
